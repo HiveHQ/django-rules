@@ -1,19 +1,16 @@
 # -*- coding: utf-8 -*-
-from django.shortcuts import get_object_or_404
-from django.utils.http import urlquote
 from django.conf import settings
 from django.contrib.auth import REDIRECT_FIELD_NAME
-from django.http import HttpResponseForbidden
-from django.http import HttpResponseRedirect
-from django.utils.functional import wraps
-from django.shortcuts import get_object_or_404
-from django.core.urlresolvers import NoReverseMatch, reverse
 from django.core.exceptions import PermissionDenied
+from django.core.urlresolvers import NoReverseMatch, reverse
+from django.http import HttpResponseForbidden, HttpResponseRedirect
+from django.shortcuts import get_object_or_404
+from django.utils.functional import wraps
+from django.utils.http import urlquote
 
-from exceptions import RulesError
-from exceptions import NonexistentPermission
-from models import RulePermission
-from backends import ObjectPermissionBackend
+from .backends import ObjectPermissionBackend
+from .exceptions import NonexistentPermission, RulesError
+from .models import RulePermission
 
 
 def object_permission_required(perm, **kwargs):
@@ -47,7 +44,7 @@ def object_permission_required(perm, **kwargs):
 
     # Check if perm is given as string in order to not decorate
     # view function itself which makes debugging harder
-    if not isinstance(perm, basestring):
+    if not isinstance(perm, str):
         raise RulesError("First argument, permission, must be a string")
 
     def decorator(view_func):
@@ -64,7 +61,9 @@ def object_permission_required(perm, **kwargs):
             # imitates it, but if the view is internal, I think it's better to force the user to pass
             # parameters as kwargs
             if rule.view_param_pk not in kwargs:
-                raise RulesError("The view does not have a parameter called %s in kwargs" % rule.view_param_pk)
+                raise RulesError(
+                    "The view does not have a parameter called %s in kwargs" % rule.view_param_pk
+                )
 
             model_class = rule.content_type.model_class()
             obj = get_object_or_404(model_class, pk=kwargs[rule.view_param_pk])
@@ -86,5 +85,7 @@ def object_permission_required(perm, **kwargs):
 
                     return HttpResponseRedirect("%s?%s=%s" % tup)
             return view_func(request, *args, **kwargs)
+
         return wraps(view_func)(_wrapped_view)
+
     return decorator
