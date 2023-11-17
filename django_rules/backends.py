@@ -2,8 +2,8 @@
 import inspect
 
 from django.conf import settings
-from django.contrib.contenttypes.models import ContentType
-from django.contrib.auth.models import User, AnonymousUser
+from django.contrib.auth.models import User
+from django.utils.functional import cached_property
 
 try:
     from importlib import import_module
@@ -17,11 +17,27 @@ from exceptions import NonexistentFieldName
 from exceptions import NonexistentPermission
 from exceptions import RulesError
 
+class RulePermCache(object):
+    @cached_property
+    def rules(self):
+        return {
+            rp.codename: rp
+            for rp in  RulePermission.objects.select_related('content_type').all()
+        }
+
+    def get_rule_by_codename(self, codename):
+        return self.rules.get(codename)
+
+
+rule_cache = RulePermCache()
 
 class ObjectPermissionBackend(object):
     supports_object_permissions = True
     supports_anonymous_user = True
     supports_inactive_user = True
+
+    def __init__(self):
+        self._rules = {}
 
     def authenticate(self, username, password):
         return None
@@ -33,7 +49,7 @@ class ObjectPermissionBackend(object):
         If it exists returns the value of obj.field_name or obj.field_name() in case
         the field is a method.
         """
-        
+
         if obj is None:
             return False
 
@@ -41,7 +57,7 @@ class ObjectPermissionBackend(object):
             user_obj = User.objects.get(pk=settings.ANONYMOUS_USER_ID)
 
         # Centralized authorizations
-        # You need to define a module in settings.CENTRAL_AUTHORIZATIONS that has a 
+        # You need to define a module in settings.CENTRAL_AUTHORIZATIONS that has a
         # central_authorizations function inside
         if hasattr(settings, 'CENTRAL_AUTHORIZATIONS'):
             module = getattr(settings, 'CENTRAL_AUTHORIZATIONS')
@@ -55,10 +71,10 @@ class ObjectPermissionBackend(object):
                 central_authorizations = getattr(mod, 'central_authorizations')
             except AttributeError:
                 raise RulesError('Error module %s does not have a central_authorization function"' % (module))
-            
+
             try:
                 is_authorized = central_authorizations(user_obj, perm)
-                # If the value returned is a boolean we pass it up and stop checking 
+                # If the value returned is a boolean we pass it up and stop checking
                 # If not, we continue checking
                 if isinstance(is_authorized, bool):
                     return is_authorized
@@ -69,12 +85,15 @@ class ObjectPermissionBackend(object):
         # Note:
         # is_active and is_superuser are checked by default in django.contrib.auth.models
         # lines from 301-306 in Django 1.2.3
-	# If this checks dissapear in mainstream, tests will fail, so we won't double check them :)
-        ctype = ContentType.objects.get_for_model(obj)
+        # If this checks dissapear in mainstream, tests will fail, so we won't double check them :)
+        # ctype = ContentType.objects.get_for_model(obj)
 
         # We get the rule data and return the value of that rule
         try:
-            rule = RulePermission.objects.get(codename = perm, content_type = ctype)
+            rule = rule_cache.get_rule_by_codename(perm)
+
+            if not rule:
+                rule = RulePermission.objects.get(codename = perm)
         except RulePermission.DoesNotExist:
             return False
 
