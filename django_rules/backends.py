@@ -22,7 +22,7 @@ class RulePermCache(object):
     def rules(self):
         return {
             rp.codename: rp
-            for rp in  RulePermission.objects.select_related('content_type').all()
+            for rp in RulePermission.objects.select_related('content_type').all()
         }
 
     def get_rule_by_codename(self, codename):
