@@ -1,22 +1,41 @@
 # -*- coding: utf-8 -*-
 import inspect
+
 from django.conf import settings
-from django.contrib.auth.models import AnonymousUser, User
-from django.contrib.contenttypes.models import ContentType
+from django.contrib.auth.models import User
+from django.utils.functional import cached_property
 
 try:
     from importlib import import_module
 except ImportError:  # python = 2.6
     from django.utils.importlib import import_module  # NOQA
 
-from .exceptions import NonexistentFieldName, NonexistentPermission, NotBooleanPermission, RulesError
+from .exceptions import (NonexistentFieldName, NonexistentPermission,
+                         NotBooleanPermission, RulesError)
 from .models import RulePermission
 
+
+class RulePermCache(object):
+    @cached_property
+    def rules(self):
+        return {
+            rp.codename: rp
+            for rp in RulePermission.objects.select_related('content_type').all()
+        }
+
+    def get_rule_by_codename(self, codename):
+        return self.rules.get(codename)
+
+
+rule_cache = RulePermCache()
 
 class ObjectPermissionBackend(object):
     supports_object_permissions = True
     supports_anonymous_user = True
     supports_inactive_user = True
+
+    def __init__(self):
+        self._rules = {}
 
     def authenticate(self, username, password):
         return None
@@ -65,11 +84,14 @@ class ObjectPermissionBackend(object):
         # is_active and is_superuser are checked by default in django.contrib.auth.models
         # lines from 301-306 in Django 1.2.3
         # If this checks dissapear in mainstream, tests will fail, so we won't double check them :)
-        ctype = ContentType.objects.get_for_model(obj)
+        # ctype = ContentType.objects.get_for_model(obj)
 
         # We get the rule data and return the value of that rule
         try:
-            rule = RulePermission.objects.get(codename=perm, content_type=ctype)
+            rule = rule_cache.get_rule_by_codename(perm)
+
+            if not rule:
+                rule = RulePermission.objects.get(codename = perm)
         except RulePermission.DoesNotExist:
             return False
 

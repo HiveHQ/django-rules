@@ -3,12 +3,8 @@ from django.conf import settings
 from django.contrib.auth import REDIRECT_FIELD_NAME
 from django.core.exceptions import PermissionDenied
 from django.core.urlresolvers import NoReverseMatch, reverse
-from django.http import HttpResponseForbidden, HttpResponseRedirect
-from django.shortcuts import get_object_or_404
-from django.utils.functional import wraps
-from django.utils.http import urlquote
 
-from .backends import ObjectPermissionBackend
+from .backends import ObjectPermissionBackend, rule_cache
 from .exceptions import NonexistentPermission, RulesError
 from .models import RulePermission
 
@@ -37,10 +33,10 @@ def object_permission_required(perm, **kwargs):
 
     """
 
-    login_url = kwargs.pop('login_url', settings.LOGIN_URL)
-    redirect_url = kwargs.pop('redirect_url', "")
-    redirect_field_name = kwargs.pop('redirect_field_name', REDIRECT_FIELD_NAME)
-    return_403 = kwargs.pop('return_403', False)
+    login_url = kwargs.pop("login_url", settings.LOGIN_URL)
+    redirect_url = kwargs.pop("redirect_url", "")
+    redirect_field_name = kwargs.pop("redirect_field_name", REDIRECT_FIELD_NAME)
+    return_403 = kwargs.pop("return_403", False)
 
     # Check if perm is given as string in order to not decorate
     # view function itself which makes debugging harder
@@ -52,7 +48,9 @@ def object_permission_required(perm, **kwargs):
             obj = None
 
             try:
-                rule = RulePermission.objects.get(codename=perm)
+                rule = rule_cache.get_rule_by_codename(perm)
+                if not rule:
+                    rule = RulePermission.objects.get(codename=perm)
             except RulePermission.DoesNotExist:
                 raise NonexistentPermission("Permission %s does not exist" % perm)
 
@@ -62,7 +60,8 @@ def object_permission_required(perm, **kwargs):
             # parameters as kwargs
             if rule.view_param_pk not in kwargs:
                 raise RulesError(
-                    "The view does not have a parameter called %s in kwargs" % rule.view_param_pk
+                    "The view does not have a parameter called %s in kwargs"
+                    % rule.view_param_pk
                 )
 
             model_class = rule.content_type.model_class()
