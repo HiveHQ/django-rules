@@ -2,8 +2,8 @@
 from django.conf import settings
 from django.contrib.auth import REDIRECT_FIELD_NAME
 from django.core.exceptions import PermissionDenied
-from django.core.urlresolvers import NoReverseMatch, reverse
 from django.shortcuts import get_object_or_404
+from django.urls import NoReverseMatch, reverse
 from django.utils.functional import wraps
 from django.utils.http import urlquote
 
