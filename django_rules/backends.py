@@ -10,10 +10,12 @@ try:
 except ImportError:  # python = 2.6
     from django.utils.importlib import import_module  # NOQA
 
-from .exceptions import (NonexistentFieldName, NonexistentPermission,
-                         NotBooleanPermission, RulesError)
-from .models import RulePermission
 
+from models import RulePermission
+from exceptions import NotBooleanPermission
+from exceptions import NonexistentFieldName
+from exceptions import NonexistentPermission
+from exceptions import RulesError
 
 class RulePermCache(object):
     @cached_property
@@ -62,7 +64,7 @@ class ObjectPermissionBackend(object):
 
             try:
                 mod = import_module(module)
-            except ImportError as e:
+            except ImportError, e:
                 raise RulesError('Error importing central authorizations module %s: "%s"' % (module, e))
 
             try:
@@ -99,32 +101,25 @@ class ObjectPermissionBackend(object):
         try:
             bound_field = getattr(obj, rule.field_name)
         except AttributeError:
-            raise NonexistentFieldName(
-                "Field_name %s from rule %s does not longer exist in model %s. \
-                                        The rule is obsolete!",
-                (rule.field_name, rule.codename, rule.content_type.model),
-            )
+            raise NonexistentFieldName("Field_name %s from rule %s does not longer exist in model %s. \
+                                        The rule is obsolete!", (rule.field_name, rule.codename, rule.content_type.model))
 
         if not isinstance(bound_field, bool) and not callable(bound_field):
-            raise NotBooleanPermission(
-                "Attribute %s from model %s on rule %s does not return a boolean value",
-                (rule.field_name, rule.content_type.model, rule.codename),
-            )
+            raise NotBooleanPermission("Attribute %s from model %s on rule %s does not return a boolean value",
+                                        (rule.field_name, rule.content_type.model, rule.codename))
 
         if not callable(bound_field):
             is_authorized = bound_field
         else:
             # Otherwise it is a callabe bound_field
             # Let's see if we pass or not user_obj as a parameter
-            if len(inspect.getargspec(bound_field)[0]) == 2:
+            if (len(inspect.getargspec(bound_field)[0]) == 2):
                 is_authorized = bound_field(user_obj)
             else:
                 is_authorized = bound_field()
 
             if not isinstance(is_authorized, bool):
-                raise NotBooleanPermission(
-                    "Callable %s from model %s on rule %s does not return a boolean value",
-                    (rule.field_name, rule.content_type.model, rule.codename),
-                )
+                raise NotBooleanPermission("Callable %s from model %s on rule %s does not return a boolean value",
+                                            (rule.field_name, rule.content_type.model, rule.codename))
 
         return is_authorized

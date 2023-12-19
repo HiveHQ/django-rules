@@ -1,15 +1,19 @@
 # -*- coding: utf-8 -*-
+from django.shortcuts import get_object_or_404
+from django.utils.http import urlquote
 from django.conf import settings
 from django.contrib.auth import REDIRECT_FIELD_NAME
-from django.core.exceptions import PermissionDenied
-from django.core.urlresolvers import NoReverseMatch, reverse
-from django.shortcuts import get_object_or_404
+from django.http import HttpResponseForbidden
+from django.http import HttpResponseRedirect
 from django.utils.functional import wraps
-from django.utils.http import urlquote
+from django.shortcuts import get_object_or_404
+from django.core.urlresolvers import NoReverseMatch, reverse
+from django.core.exceptions import PermissionDenied
 
-from .backends import ObjectPermissionBackend, rule_cache
-from .exceptions import NonexistentPermission, RulesError
-from .models import RulePermission
+from exceptions import RulesError
+from exceptions import NonexistentPermission
+from models import RulePermission
+from backends import ObjectPermissionBackend, rule_cache
 
 
 def object_permission_required(perm, **kwargs):
@@ -43,7 +47,7 @@ def object_permission_required(perm, **kwargs):
 
     # Check if perm is given as string in order to not decorate
     # view function itself which makes debugging harder
-    if not isinstance(perm, str):
+    if not isinstance(perm, basestring):
         raise RulesError("First argument, permission, must be a string")
 
     def decorator(view_func):
