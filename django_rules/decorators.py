@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
+from urllib.parse import quote
+
 from django.conf import settings
 from django.contrib.auth import REDIRECT_FIELD_NAME
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404
 from django.urls import NoReverseMatch, reverse
 from django.utils.functional import wraps
-from django.utils.http import urlquote
 
 from django_rules.backends import ObjectPermissionBackend, rule_cache
 from django_rules.exceptions import NonexistentPermission, RulesError
@@ -76,13 +77,13 @@ def object_permission_required(perm, **kwargs):
                 else:
                     if redirect_url:
                         try:
-                            path = urlquote(request.get_full_path())
+                            path = quote(request.get_full_path())
                             redirect_url_reversed = reverse(redirect_url)
                             tup = redirect_url_reversed, redirect_field_name, path
                         except NoReverseMatch:
                             tup = redirect_url, redirect_field_name, path
                     else:
-                        path = urlquote(request.get_full_path())
+                        path = quote(request.get_full_path())
                         tup = login_url, redirect_field_name, path
 
                     return HttpResponseRedirect("%s?%s=%s" % tup)
