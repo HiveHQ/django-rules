@@ -52,7 +52,7 @@ class ObjectPermissionBackend(object):
         if obj is None:
             return False
 
-        if not user_obj.is_authenticated():
+        if not user_obj.is_authenticated:
             user_obj = User.objects.get(pk=settings.ANONYMOUS_USER_ID)
 
         # Centralized authorizations
