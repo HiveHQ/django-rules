@@ -10,9 +10,10 @@ try:
 except ImportError:  # python = 2.6
     from django.utils.importlib import import_module  # NOQA
 
-from .exceptions import (NonexistentFieldName, NonexistentPermission,
-                         NotBooleanPermission, RulesError)
-from .models import RulePermission
+from django_rules.exceptions import (NonexistentFieldName,
+                                     NonexistentPermission,
+                                     NotBooleanPermission, RulesError)
+from django_rules.models import RulePermission
 
 
 class RulePermCache(object):

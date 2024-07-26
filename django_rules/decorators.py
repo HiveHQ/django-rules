@@ -7,9 +7,9 @@ from django.urls import NoReverseMatch, reverse
 from django.utils.functional import wraps
 from django.utils.http import urlquote
 
-from .backends import ObjectPermissionBackend, rule_cache
-from .exceptions import NonexistentPermission, RulesError
-from .models import RulePermission
+from django_rules.backends import ObjectPermissionBackend, rule_cache
+from django_rules.exceptions import NonexistentPermission, RulesError
+from django_rules.models import RulePermission
 
 
 def object_permission_required(perm, **kwargs):
