@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
+from functools import wraps
+from urllib.parse import quote as urlquote
+
 from django.conf import settings
 from django.contrib.auth import REDIRECT_FIELD_NAME
 from django.core.exceptions import PermissionDenied
-from django.core.urlresolvers import NoReverseMatch, reverse
 from django.shortcuts import get_object_or_404
-from django.utils.functional import wraps
-from django.utils.http import urlquote
+from django.urls import NoReverseMatch, reverse
 
-from .backends import ObjectPermissionBackend, rule_cache
+from .backends import rule_cache
 from .exceptions import NonexistentPermission, RulesError
 from .models import RulePermission
 

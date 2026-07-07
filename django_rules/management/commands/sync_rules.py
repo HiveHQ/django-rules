@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-import sys, os
-import imp
+import sys
+import importlib.util
 from optparse import make_option
 
 from django.conf import settings
@@ -26,12 +26,12 @@ def import_app(app_label, verbosity):
         print "Stopping synchronization"
         sys.exit(1)
    
-    # imp.find_module looks for rules.py within the app
-    # It does not import the module, but raises and ImportError
+    # importlib.util.find_spec looks for rules.py within the app
+    # It does not import the module, but returns None
     # if rules.py does not exist, so we continue to next app
     try:
-        imp.find_module('rules', app_path)
-    except ImportError:
+        importlib.util.find_spec('rules', app_path[0] if app_path else None)
+    except (ImportError, ModuleNotFoundError, ValueError):
         return
 
     if verbosity >= 1:
