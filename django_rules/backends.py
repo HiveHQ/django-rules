@@ -10,8 +10,7 @@ try:
 except ImportError:  # python = 2.6
     from django.utils.importlib import import_module  # NOQA
 
-from .exceptions import (NonexistentFieldName, NonexistentPermission,
-                         NotBooleanPermission, RulesError)
+from .exceptions import NonexistentFieldName, NotBooleanPermission, RulesError
 from .models import RulePermission
 
 
@@ -20,7 +19,7 @@ class RulePermCache(object):
     def rules(self):
         return {
             rp.codename: rp
-            for rp in RulePermission.objects.select_related('content_type').all()
+            for rp in RulePermission.objects.select_related("content_type").all()
         }
 
     def get_rule_by_codename(self, codename):
@@ -28,6 +27,7 @@ class RulePermCache(object):
 
 
 rule_cache = RulePermCache()
+
 
 class ObjectPermissionBackend(object):
     supports_object_permissions = True
@@ -57,18 +57,24 @@ class ObjectPermissionBackend(object):
         # Centralized authorizations
         # You need to define a module in settings.CENTRAL_AUTHORIZATIONS that has a
         # central_authorizations function inside
-        if hasattr(settings, 'CENTRAL_AUTHORIZATIONS'):
-            module = getattr(settings, 'CENTRAL_AUTHORIZATIONS')
+        if hasattr(settings, "CENTRAL_AUTHORIZATIONS"):
+            module = getattr(settings, "CENTRAL_AUTHORIZATIONS")
 
             try:
                 mod = import_module(module)
             except ImportError as e:
-                raise RulesError('Error importing central authorizations module %s: "%s"' % (module, e))
+                raise RulesError(
+                    'Error importing central authorizations module %s: "%s"'
+                    % (module, e)
+                )
 
             try:
-                central_authorizations = getattr(mod, 'central_authorizations')
+                central_authorizations = getattr(mod, "central_authorizations")
             except AttributeError:
-                raise RulesError('Error module %s does not have a central_authorization function"' % (module))
+                raise RulesError(
+                    'Error module %s does not have a central_authorization function"'
+                    % (module)
+                )
 
             try:
                 is_authorized = central_authorizations(user_obj, perm)
@@ -78,7 +84,9 @@ class ObjectPermissionBackend(object):
                     return is_authorized
 
             except TypeError:
-                raise RulesError('central_authorizations should receive 2 parameters: (user_obj, perm)')
+                raise RulesError(
+                    "central_authorizations should receive 2 parameters: (user_obj, perm)"
+                )
 
         # Note:
         # is_active and is_superuser are checked by default in django.contrib.auth.models
@@ -91,7 +99,7 @@ class ObjectPermissionBackend(object):
             rule = rule_cache.get_rule_by_codename(perm)
 
             if not rule:
-                rule = RulePermission.objects.get(codename = perm)
+                rule = RulePermission.objects.get(codename=perm)
         except RulePermission.DoesNotExist:
             return False
 
@@ -116,7 +124,7 @@ class ObjectPermissionBackend(object):
         else:
             # Otherwise it is a callabe bound_field
             # Let's see if we pass or not user_obj as a parameter
-            if len(inspect.getargspec(bound_field)[0]) == 2:
+            if len(inspect.getfullargspec(bound_field)[0]) == 2:
                 is_authorized = bound_field(user_obj)
             else:
                 is_authorized = bound_field()
