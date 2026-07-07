@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-import sys
 import importlib.util
+import sys
 from optparse import make_option
 
 from django.conf import settings
@@ -10,57 +10,65 @@ try:
 except ImportError:  # python = 2.6
     from django.utils.importlib import import_module  # NOQA
 
-from django.core.management import call_command
-from django.core.management import BaseCommand
+from django.core.management import BaseCommand, call_command
 from django.db import connections
 
 
 def import_app(app_label, verbosity):
     # We get the app_path, necessary to use imp module find function
     try:
-        app_path = __import__(app_label, {}, {}, [app_label.split('.')[-1]]).__path__
+        app_path = __import__(app_label, {}, {}, [app_label.split(".")[-1]]).__path__
     except AttributeError:
         return
     except ImportError:
-        print "Unknown application: %s" % app_label
-        print "Stopping synchronization"
+        print("Unknown application: %s" % app_label)
+        print("Stopping synchronization")
         sys.exit(1)
-   
+
     # importlib.util.find_spec looks for rules.py within the app
     # It does not import the module, but returns None
     # if rules.py does not exist, so we continue to next app
     try:
-        importlib.util.find_spec('rules', app_path[0] if app_path else None)
+        importlib.util.find_spec("rules", app_path[0] if app_path else None)
     except (ImportError, ModuleNotFoundError, ValueError):
         return
 
     if verbosity >= 1:
-        sys.stderr.write('Syncing rules from %s\n' % app_label)
-    
+        sys.stderr.write("Syncing rules from %s\n" % app_label)
+
     # Now we import the module, this should bubble up errors
     # if there are any in rules.py Warning the user
-    generator = import_module('.rules', app_label)
+    generator = import_module(".rules", app_label)
 
 
 class Command(BaseCommand):
-    if hasattr(BaseCommand, 'option_list'):
+    if hasattr(BaseCommand, "option_list"):
         option_list = BaseCommand.option_list + (
-            make_option("--fixture", action='store_true', dest="fixture", default=False,
-                       help="Generate a fixture of django_rules"),
+            make_option(
+                "--fixture",
+                action="store_true",
+                dest="fixture",
+                default=False,
+                help="Generate a fixture of django_rules",
+            ),
         )
     else:
+
         def add_arguments(self, parser):
             parser.add_argument(
-                '--fixture', action='store_true', dest='fixture',
-                help='Generate a fixture of django_rules', default=False
+                "--fixture",
+                action="store_true",
+                dest="fixture",
+                help="Generate a fixture of django_rules",
+                default=False,
             )
 
-    help = 'Syncs into database all rules defined in rules.py files'
-    args = '[appname ...]'
+    help = "Syncs into database all rules defined in rules.py files"
+    args = "[appname ...]"
 
     def handle(self, *app_labels, **options):
-        verbosity = int(options.pop('verbosity', 1))
-        fixture = options.pop('fixture')
+        verbosity = int(options.pop("verbosity", 1))
+        fixture = options.pop("fixture")
 
         if len(app_labels) == 0:
             # We look for a rules.py within every app in INSTALLED_APPS
@@ -73,6 +81,8 @@ class Command(BaseCommand):
 
         if fixture:
             for alias in connections._connections:
-                call_command("dumpdata",
-                         'django_rules.rulepermission',
-                        **dict(options, verbosity=0, database=alias))
+                call_command(
+                    "dumpdata",
+                    "django_rules.rulepermission",
+                    **dict(options, verbosity=0, database=alias),
+                )
